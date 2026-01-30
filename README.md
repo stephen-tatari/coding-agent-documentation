@@ -21,6 +21,23 @@ Engineering decisions get made, code gets merged, and months later nobody rememb
 
 ---
 
+## Directory Structure
+
+```
+ai_docs/
+├── index.md          # Master index (discovery entry point)
+├── plans/            # Implementation plans (short-lived)
+│   └── YYYY-MM-DD-<feature>.md
+├── research/         # Research notes AND decision records (variable lifespan)
+│   └── YYYY-MM-DD-<topic>.md
+└── handoffs/         # Session continuity documents
+    └── YYYY-MM-DD-<context>.md
+```
+
+**index.md** serves as the master index for AI agents and humans alike - a lexicon of project-specific terminology, architecture overview, and links to active documents. This follows the [SIP-189 pattern](https://github.com/apache/superset/issues/35822) for context engineering.
+
+---
+
 ## Artifact Types
 
 **Plan** (short-lived)
@@ -28,84 +45,18 @@ Engineering decisions get made, code gets merged, and months later nobody rememb
 - Expected to become obsolete once feature ships
 - Default status: `archived` after merge
 
-**Decision Record** (long-lived)
-- Why we chose X over Y
-- Comparable to traditional ADRs
-- Remains `active` until superseded
-
-**Research Note** (variable)
+**Research** (variable lifespan)
 - Evidence gathering, exploration, constraints discovery
-- May be long-lived if it captures important constraints
+- Significant decisions and their rationale (ADR-style content)
+- Alternatives considered, trade-offs evaluated
+- May be long-lived if it captures important architectural decisions
 - Status depends on ongoing relevance
 
----
-
-## Directory Structure Options
-
-**For organizational consensus - choose one:**
-
-### Option A: `decisions/` (Recommended)
-```
-decisions/
-├── README.md              # Convention documentation
-├── CODEOWNERS             # Maps to team ownership
-├── plans/                 # Implementation plans (short-lived)
-│   └── YYYY-MM-DD-<feature>.md
-├── records/               # Decision records (long-lived, ADR-style)
-│   └── YYYY-MM-DD-<topic>.md
-└── research/              # Exploratory analysis
-    └── YYYY-MM-DD-<topic>.md
-```
-- Aligns with ADR tradition
-- Top-level visibility signals importance
-- Clear separation from human-authored `docs/`
-
-**Note:** If your org already uses `decisions/` for business/product decisions, consider `engineering-decisions/` or `adr/` prefix.
-
-### Option B: `context/`
-```
-context/
-├── README.md
-├── plans/
-├── records/
-└── research/
-```
-- Emerging "context engineering" terminology ([Apache Superset SIP-189](https://github.com/apache/superset/issues/35822))
-- Signals AI-accessible knowledge
-- Less established than ADR convention
-
-### Option C: `docs/decisions/`
-```
-docs/
-├── decisions/
-│   ├── plans/
-│   ├── records/
-│   └── research/
-└── ... (existing docs)
-```
-- Keeps all documentation unified
-- Familiar `docs/` convention
-- May blur line between AI and human content
-
-### Option D: Feature-scoped (Spec Kit pattern)
-```
-specs/
-└── 001-feature-name/
-    ├── spec.md
-    ├── plan.md
-    └── research.md
-```
-- Groups all artifacts per feature
-- Strong tooling support ([GitHub Spec Kit](https://github.com/github/spec-kit))
-- Requires sequential numbering discipline
-
-### Monorepo Considerations
-For multi-team repos, add team scoping:
-```
-decisions/<team>/plans/...
-decisions/<team>/records/...
-```
-Or use tags + CODEOWNERS mapping for ownership.
+**Handoff** (session continuity)
+- Preserves context between AI coding sessions
+- Current state, next steps, blockers, decisions made
+- Created at natural stopping points or before context limits
+- Typically short-lived, consumed by next session
 
 ---
 
@@ -115,7 +66,7 @@ Or use tags + CODEOWNERS mapping for ownership.
 ---
 schema_version: 1
 date: 2026-01-30
-type: plan | record | research
+type: plan | research | handoff
 status: draft | active | superseded | archived
 topic: "OAuth2 implementation approach"
 
@@ -134,7 +85,7 @@ superseded_by: "2026-02-15-oauth2-v2.md"
 tags: [auth, security, api]
 data_sensitivity: public | internal | restricted
 
-# Content sections (recommended for records)
+# Content sections (recommended for research with decisions)
 # - assumptions
 # - constraints
 # - alternatives_considered
@@ -154,7 +105,7 @@ data_sensitivity: public | internal | restricted
 **Commit when ALL are true:**
 - [ ] Claims are linked to sources (code refs, docs, external links)
 - [ ] Assumptions are explicitly listed
-- [ ] Alternatives were considered (for records)
+- [ ] Alternatives were considered (for decision-focused research)
 - [ ] A human reviewer attests it reflects the team's intent (`reviewed_by`)
 - [ ] No secrets, credentials, or sensitive data included
 - [ ] Sensitive internal URLs/systems are redacted or generalized
@@ -204,16 +155,18 @@ Consult your legal team on:
 4. PR includes both plan + code
 5. Plan status → `archived` on merge
 
-### For Records
-1. Create when making significant architectural choices
-2. Include alternatives considered and rationale
-3. Commit with related code change
-4. Remains `active` until superseded
+### For Research (including decisions)
+1. Create when making significant architectural choices OR during investigation
+2. Include alternatives considered and rationale for decisions
+3. Consolidate multiple sessions into one doc
+4. Commit when research concludes or with related code change
+5. Decisions remain `active` until superseded; exploratory notes evaluated on merge
 
-### For Research
-1. Triggered by investigation (bug analysis, API exploration)
-2. Consolidate multiple sessions into one doc
-3. Commit when research concludes, with related fix/change
+### For Handoffs
+1. Create at natural stopping points or before context limits
+2. Document current state, next steps, blockers, and decisions made
+3. Include relevant file paths and code references
+4. Next session consumes handoff and archives it
 
 ### Avoiding PR Noise
 - Docs accompany code changes, not standalone "docs-only" PRs
@@ -244,8 +197,8 @@ draft → active → superseded | archived
 
 **Type-specific defaults:**
 - `type: plan` → auto-archive on merge
-- `type: record` → remains `active` until explicitly superseded
-- `type: research` → evaluate on merge
+- `type: research` → remains `active` until explicitly superseded (for decisions) or evaluate on merge (for exploratory notes)
+- `type: handoff` → auto-archive after consumed by next session
 
 ### When to Update vs Supersede
 - **Edit in place**: Clarifications, typo fixes, adding detail (add changelog line)
@@ -260,14 +213,15 @@ Rather than age-based flags, detect via signals:
 
 ### Ownership Model
 - **Primary owner**: `reviewed_by` field, updated if ownership transfers
-- **CODEOWNERS**: Map `decisions/**` to appropriate team(s)
+- **CODEOWNERS**: Map `ai_docs/**` to appropriate team(s)
 - **On departure**: Ownership transfers to team, not orphaned
 
 ### Archival Checklist
 When deprecating a feature:
 - [ ] Archive related plans
-- [ ] Supersede or archive related records
-- [ ] Update or archive related research
+- [ ] Supersede or archive decision-focused research
+- [ ] Update or archive exploratory research
+- [ ] Clean up consumed handoffs
 
 ---
 
@@ -281,7 +235,7 @@ repos:
     rev: v0.14.0
     hooks:
       - id: markdownlint-cli2
-        files: ^decisions/.*\.md$
+        files: ^ai_docs/.*\.md$
 ```
 
 **Note:** Link checking can be flaky locally (network, rate limits). Push to CI instead.
@@ -290,16 +244,16 @@ repos:
 - **Frontmatter validation**: Ensure required fields present (use JSON schema)
 - **Link checking**: Verify `related_pr` and `superseded_by` resolve (relative links only locally)
 - **Sensitive content scan**: Flag potential secrets/credentials
-- **CODEOWNERS**: Auto-assign reviewers for `decisions/**`
+- **CODEOWNERS**: Auto-assign reviewers for `ai_docs/**`
 
 ### Templates
-Provide in `decisions/templates/`:
+Provide in `ai_docs/templates/`:
 - `plan.md` - Implementation plan scaffold
-- `record.md` - Decision record scaffold (ADR-style)
-- `research.md` - Research note scaffold
+- `research.md` - Research note scaffold (includes decision record structure)
+- `handoff.md` - Session handoff scaffold
 
 ### Discoverability
-Generate `decisions/README.md` index in CI, or maintain manually with links and brief descriptions.
+Maintain `ai_docs/index.md` as the master index with project terminology, architecture overview, and links to active documents.
 
 ---
 
@@ -340,7 +294,7 @@ PR #456: "Add OAuth2 authentication"
 ### After (with decision docs)
 PR #456: "Add OAuth2 authentication"
 - 2000 lines of code
-- `decisions/records/2026-01-15-auth-approach.md`:
+- `ai_docs/research/2026-01-15-auth-approach.md`:
   - **Decision**: OAuth2 with PKCE via `openid-client` library
   - **Alternatives**: SAML (rejected: complexity), Auth0 (rejected: cost), Keycloak (rejected: ops burden)
   - **Constraints**: Must support mobile apps, no new infrastructure
@@ -375,9 +329,8 @@ PR #456: "Add OAuth2 authentication"
 
 ## Next Steps
 
-1. **Choose directory structure** - Organizational consensus on Option A-D
-2. **Review security/compliance policy** - Legal/security team sign-off
-3. **Create README.md** - Document conventions in the chosen directory
-4. **Add templates** - Plan, record, and research templates with frontmatter
-5. **Configure tooling** - Pre-commit hooks, CI checks, CODEOWNERS
-6. **Pilot with volunteer team** - Gather feedback before broader rollout
+1. **Review security/compliance policy** - Legal/security team sign-off
+2. **Create ai_docs/index.md** - Master index with project terminology and architecture
+3. **Add templates** - Plan, research, and handoff templates with frontmatter
+4. **Configure tooling** - Pre-commit hooks, CI checks, CODEOWNERS
+5. **Pilot with volunteer team** - Gather feedback before broader rollout
