@@ -263,6 +263,23 @@ For architectural decisions, implementation plans, and research notes, see `ai_d
 
 **Master index:** Maintain `ai_docs/index.md` as the entry point with project terminology, architecture overview, and links to active documents.
 
+### Cross-Referencing
+
+Reference other ai_docs using `@ai_docs/` prefix:
+
+```markdown
+Based on constraints identified in @ai_docs/research/2026-01-10-auth-options.md, we chose OAuth2.
+
+See also:
+- @ai_docs/plans/2026-01-12-oauth2-impl.md
+- @ai_docs/research/2026-01-15-token-storage.md
+```
+
+This syntax is:
+- Grep-able across the codebase
+- Parseable by AI agents
+- Consistent with [SIP-189](https://github.com/apache/superset/issues/35822) conventions
+
 ---
 
 ## Adoption Considerations
