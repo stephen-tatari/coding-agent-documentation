@@ -110,6 +110,8 @@ data_sensitivity: public | internal | restricted
 - [ ] No secrets, credentials, or sensitive data included
 - [ ] Sensitive internal URLs/systems are redacted or generalized
 
+**File size guidance:** Keep individual documents under 500 lines (~1000-2000 tokens). Monolithic files degrade AI tool performance and exceed practical context limits. If a document grows too large, split by subtopic or phase.
+
 **When NOT to write:**
 - Trivial changes (typo fixes, dependency bumps)
 - Decisions already documented in code comments or existing ADRs
