@@ -255,13 +255,81 @@ Provide in `ai_docs/templates/`:
 - `handoff.md` - Session handoff scaffold
 
 ### Discoverability
-**Reference in AGENTS.md:** Add a section to your repository's `AGENTS.md` (or `CLAUDE.md`) pointing AI agents to `ai_docs/`:
+
+#### AGENTS.md Integration
+
+Add this section to your repository's `AGENTS.md` (or `CLAUDE.md`) to teach AI agents about your decision records:
+
 ```markdown
-## Decision Context
-For architectural decisions, implementation plans, and research notes, see `ai_docs/index.md`.
+## Decision Records
+
+Before implementing significant changes, check `ai_docs/` for existing context:
+
+- **Plans** (`ai_docs/plans/`): Active implementation plans. Check before starting work on a feature area.
+- **Research** (`ai_docs/research/`): Technical investigations and ADRs. Check before making architectural decisions.
+- **Handoffs** (`ai_docs/handoffs/`): Session continuity notes. Check when resuming paused work.
+
+### When to Create Artifacts
+
+| Situation | Create |
+|-----------|--------|
+| Starting multi-session feature work | Plan |
+| Evaluating technical options | Research note |
+| Making architectural decision | ADR (research note with Decision section) |
+| Pausing mid-implementation | Handoff |
+| Completing investigation | Research note |
+
+### Cross-Referencing
+
+Reference other ai_docs using `@ai_docs/` prefix for grep-ability:
+- `@ai_docs/research/2026-01-10-auth-options.md`
+- `@ai_docs/plans/2026-01-12-oauth2-impl.md`
+
+Start at `ai_docs/index.md` for project overview and active documents.
 ```
 
-**Master index:** Maintain `ai_docs/index.md` as the entry point with project terminology, architecture overview, and links to active documents.
+#### index.md Template
+
+Maintain `ai_docs/index.md` as the entry point. Template:
+
+```markdown
+# Project: [Name]
+
+## Overview
+[2-3 sentence project description. What problem does it solve? Who uses it?]
+
+## Key Terminology
+
+| Term | Definition |
+|------|------------|
+| [Domain term] | [Clear definition] |
+| [Acronym] | [Expansion and meaning] |
+
+## Architecture
+
+[Brief description of system structure]
+
+\`\`\`
+┌─────────┐     ┌─────────┐     ┌─────────┐
+│ Client  │────▶│   API   │────▶│   DB    │
+└─────────┘     └─────────┘     └─────────┘
+\`\`\`
+
+## Active Decisions
+- @ai_docs/research/YYYY-MM-DD-[decision-name].md - [One-line summary]
+
+## Current Plans
+- @ai_docs/plans/YYYY-MM-DD-[feature-name].md - [Status: planning|in-progress|blocked]
+
+## Conventions
+- [Key coding convention or pattern]
+- [Testing approach]
+- [Deployment process]
+
+## Out of Scope
+- [What this project explicitly doesn't handle]
+- [Adjacent systems to be aware of]
+```
 
 ### Cross-Referencing
 
