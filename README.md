@@ -14,7 +14,7 @@ Engineering decisions get made, code gets merged, and months later nobody rememb
 
 **Key principles:**
 - Docs ship *with* code changes, not as separate PRs (avoids noise)
-- Human accountability via reviewer attestation
+- Human accountability via PR review
 - Structured directory with clear purpose
 - Lifecycle management to prevent staleness
 - Security-conscious: explicit policies for sensitive content
@@ -71,8 +71,7 @@ status: draft | active | superseded | archived
 topic: "OAuth2 implementation approach"
 
 # Accountability
-author: jane.doe                   # human author or "ai-assisted"
-reviewed_by: john.smith            # required for plans/research; optional for handoffs
+author: jane.doe                   # Human owner (run: git config user.name)
 ai_assisted: true                  # explicit flag
 ai_model: claude-3.5-sonnet        # optional: which model
 
@@ -94,7 +93,7 @@ data_sensitivity: public | internal | restricted
 ---
 ```
 
-**Required fields:** `schema_version`, `date`, `type`, `status`, `topic`, `reviewed_by` (except handoffs)
+**Required fields:** `schema_version`, `date`, `type`, `status`, `topic`
 
 **Conditional:** `ai_assisted` required if AI was used
 
@@ -106,7 +105,7 @@ data_sensitivity: public | internal | restricted
 - [ ] Claims are linked to sources (code refs, docs, external links)
 - [ ] Assumptions are explicitly listed
 - [ ] Alternatives were considered (for decision-focused research)
-- [ ] A human reviewer attests it reflects the team's intent (`reviewed_by`)
+- [ ] PR review provides human accountability (no separate `reviewed_by` field needed)
 - [ ] No secrets, credentials, or sensitive data included
 - [ ] Sensitive internal URLs/systems are redacted or generalized
 
@@ -214,7 +213,7 @@ Rather than age-based flags, detect via signals:
 - Add `last_reviewed: YYYY-MM-DD` when touched
 
 ### Ownership Model
-- **Primary owner**: `reviewed_by` field, updated if ownership transfers
+- **Primary owner**: `author` field, updated if ownership transfers
 - **CODEOWNERS**: Map `ai_docs/**` to appropriate team(s)
 - **On departure**: Ownership transfers to team, not orphaned
 
@@ -368,7 +367,7 @@ This syntax is:
 | Docs drift from code | Commit together, PR template checklist |
 | Review fatigue | Consolidated docs, "when not to write" guidance |
 | Staleness | Signal-based detection, ownership model |
-| Inaccurate AI content | Human reviewer attestation required |
+| Inaccurate AI content | PR review provides human accountability |
 | Security leaks | Prohibited content policy, CI scanning |
 
 ### Alternative Approach
