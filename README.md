@@ -255,7 +255,13 @@ Provide in `ai_docs/templates/`:
 - `handoff.md` - Session handoff scaffold
 
 ### Discoverability
-Maintain `ai_docs/index.md` as the master index with project terminology, architecture overview, and links to active documents.
+**Reference in AGENTS.md:** Add a section to your repository's `AGENTS.md` (or `CLAUDE.md`) pointing AI agents to `ai_docs/`:
+```markdown
+## Decision Context
+For architectural decisions, implementation plans, and research notes, see `ai_docs/index.md`.
+```
+
+**Master index:** Maintain `ai_docs/index.md` as the entry point with project terminology, architecture overview, and links to active documents.
 
 ---
 
