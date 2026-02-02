@@ -72,7 +72,7 @@ topic: "OAuth2 implementation approach"
 
 # Accountability
 author: jane.doe                   # human author or "ai-assisted"
-reviewed_by: john.smith            # required attestation
+reviewed_by: john.smith            # required for plans/research; optional for handoffs
 ai_assisted: true                  # explicit flag
 ai_model: claude-3.5-sonnet        # optional: which model
 
@@ -94,7 +94,7 @@ data_sensitivity: public | internal | restricted
 ---
 ```
 
-**Required fields:** `schema_version`, `date`, `type`, `status`, `topic`, `reviewed_by`
+**Required fields:** `schema_version`, `date`, `type`, `status`, `topic`, `reviewed_by` (except handoffs)
 
 **Conditional:** `ai_assisted` required if AI was used
 
