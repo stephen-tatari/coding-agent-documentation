@@ -46,7 +46,8 @@ Modify the current proposal (which describes per-project `ai_docs/` directories)
 - Teams will clone the thoughts repo as a sibling directory
 - AGENTS.md is the primary discovery mechanism for AI agents
 - Code PRs will reference decision docs via links
-- Grep on frontmatter is sufficient for project filtering
+- Decision docs will back-reference implementing PRs via `related_prs:`
+- `rg` (ripgrep) on `repo:` frontmatter is sufficient for filtering
 
 ## Constraints
 
@@ -89,6 +90,7 @@ Modify the current proposal (which describes per-project `ai_docs/` directories)
   - New structure: `plans/`, `research/`, `handoffs/`, `templates/` at root
   - Remove `index.md` (optional in centralized model)
   - Show "cloned as siblings" example
+  - Document optional `<project>` in filename convention
 - [ ] Verify changes coherent
 
 **Success Criteria:**
@@ -103,8 +105,10 @@ Modify the current proposal (which describes per-project `ai_docs/` directories)
 **Tasks:**
 
 - [ ] Update Document Schema section
-  - Add `project: <name>` field (string)
-  - Add `projects: [a, b]` field (array, for cross-project)
+  - Add `project: <name>` field (logical project/service name)
+  - Add `repo: org/repo` field (GitHub org/repo identifier)
+  - Add `repos: [org/a, org/b]` field (array, for cross-repo docs)
+  - Add `related_prs:` field (list of PR URLs implementing the decision)
   - Mark as optional but recommended
 - [ ] Keep Artifact Types section largely unchanged
   - Plan, Research, Handoff descriptions remain valid
@@ -192,7 +196,8 @@ Modify the current proposal (which describes per-project `ai_docs/` directories)
 thoughts/
 ├── README.md
 ├── plans/
-│   └── YYYY-MM-DD-<topic>.md
+│   ├── YYYY-MM-DD-<topic>.md              # project in frontmatter
+│   └── YYYY-MM-DD-<project>-<topic>.md    # project in filename (optional)
 ├── research/
 │   └── YYYY-MM-DD-<topic>.md
 ├── handoffs/
@@ -200,11 +205,16 @@ thoughts/
 └── templates/
 ```
 
+**Naming convention:** Including `<project>` in the filename is optional but recommended when the topic is project-specific. Cross-cutting docs should omit it.
+
 ### New Frontmatter Fields
 
 ```yaml
-project: conductor                  # Associates doc with a codebase
-projects: [conductor, api-gateway]  # For cross-project docs
+project: conductor                  # Logical project/service name
+repo: org/conductor                 # GitHub org/repo (canonical identifier)
+repos: [org/conductor, org/api-gateway]  # For cross-repo docs
+related_prs:                        # PRs that implement this decision
+  - https://github.com/org/conductor/pull/123
 ```
 
 ### AGENTS.md Template for Code Repos
@@ -215,16 +225,16 @@ projects: [conductor, api-gateway]  # For cross-project docs
 Decision documentation for this project is centralized at:
 **Repository:** [github.com/org/thoughts](https://github.com/org/thoughts)
 
-Find this project's docs by searching for `project: <this-project-name>` in frontmatter.
+Find this project's docs by searching for `repo: org/<this-repo>` in frontmatter.
 
 ### Discovery
 
 Clone as sibling directory:
 git clone git@github.com:org/thoughts.git ../thoughts
 
-Search for project docs:
-grep -l "project: <this-project-name>" ../thoughts/plans/*.md
-grep -l "project: <this-project-name>" ../thoughts/research/*.md
+Search for this repo's docs:
+rg -l "repo: org/<this-repo>" ../thoughts/plans/
+rg -l "repos:.*org/<this-repo>" ../thoughts/plans/  # cross-repo docs
 
 ### Before Starting Work
 
