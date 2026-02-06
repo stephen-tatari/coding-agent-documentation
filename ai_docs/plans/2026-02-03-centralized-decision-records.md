@@ -3,7 +3,7 @@ schema_version: 1
 date: 2026-02-03
 type: plan
 status: draft
-topic: "Centralized Decision Records Proposal"
+topic: "Hybrid Decision Records Proposal (Central + Local)"
 
 # Accountability
 author: Stephen Price
@@ -18,20 +18,21 @@ tags: [documentation, decision-records, ai-docs]
 data_sensitivity: internal
 ---
 
-# Plan: Centralized Decision Records Proposal
+# Plan: Hybrid Decision Records Proposal
 
 ## Desired End State
 
-README.md describes a **centralized** approach to decision documentation where all docs live in a single `thoughts` repository, enabling cross-project visibility while keeping code repositories clean. Engineers can discover relevant decisions via AGENTS.md pointers and grep commands.
+README.md describes a **hybrid** approach to decision documentation: durable decisions (plans, research) are centralized in a dedicated AI documentation repository for cross-project visibility, while ephemeral handoffs remain local in each code repo's `ai_docs/handoffs/` directory (gitignored). Engineers discover centralized decisions via AGENTS.md pointers and grep commands; handoffs are session-scoped and disposable.
 
 ## Overview
 
-Modify the current proposal (which describes per-project `ai_docs/` directories) to instead describe a centralized model where:
+Modify the current proposal (which describes per-project `ai_docs/` directories) to instead describe a hybrid model where:
 
-- A single `thoughts` repo contains all decision documentation
-- Flat structure with `plans/`, `research/`, `handoffs/` at root (no project subdirs)
-- Project association via frontmatter `project:` field
+- A central AI documentation repo contains durable decision documentation (`plans/`, `research/`)
+- Flat structure at root (no project subdirs), project association via frontmatter `project:` field
 - Code repos point to central repo via AGENTS.md
+- Handoffs stay local in each code repo's `ai_docs/handoffs/` directory, gitignored
+- Handoffs are ephemeral session state — no archival value, no cross-project relevance
 
 ## What We're NOT Doing
 
@@ -40,14 +41,17 @@ Modify the current proposal (which describes per-project `ai_docs/` directories)
 - Not using project subdirectories (flat with frontmatter)
 - Not requiring PRs for doc commits (direct commits, reviewed via code PR)
 - Not including personal/engineer-specific directories
+- Not centralizing handoffs (ephemeral session state, no archival value)
 
 ## Assumptions
 
-- Teams will clone the thoughts repo as a sibling directory
+- Teams will clone the AI documentation repo as a sibling directory
 - AGENTS.md is the primary discovery mechanism for AI agents
 - Code PRs will reference decision docs via links
 - Decision docs will back-reference implementing PRs via `related_prs:`
 - `rg` (ripgrep) on `repo:` frontmatter is sufficient for filtering
+- Handoffs have no cross-project value — they are session-scoped context
+- Handoffs are gitignored in code repos to avoid commit noise
 
 ## Constraints
 
@@ -67,40 +71,45 @@ Modify the current proposal (which describes per-project `ai_docs/` directories)
 **Pros:** Clear project boundaries, easy to scope
 **Cons:** "Where does cross-project stuff go?" friction, mimics what we're trying to avoid
 
-### Option C: Centralized flat structure (chosen)
+### Option C: Centralized flat structure
 
 **Pros:** Simple structure, cross-project search easy, project via frontmatter flexible
-**Cons:** Relies on frontmatter discipline, harder to browse by project in filesystem
+**Cons:** Relies on frontmatter discipline, harder to browse by project in filesystem; centralizes handoffs that are ephemeral session state with no cross-project value
 
-**Decision:** Option C - flat structure with frontmatter-based project association. Simplest structure that enables cross-project visibility while maintaining flexibility.
+### Option D: Hybrid — central durable docs, local handoffs (chosen)
+
+**Pros:** Durable decisions get cross-project visibility; handoffs stay where they're useful (local, session-scoped); code repos stay clean of plans/research; no noise from gitignored handoffs in central repo
+**Cons:** Two locations to understand; AGENTS.md must explain both; slightly more complex mental model than pure centralized
+
+**Decision:** Option D — hybrid model. Plans and research centralize in the AI documentation repo for cross-project discovery. Handoffs remain local in each code repo's `ai_docs/handoffs/` (gitignored) because they are ephemeral session state with no archival or cross-project value.
 
 ## Implementation Phases
 
 ### Phase 1: Update Core Sections
 
-**Goal:** Replace executive summary and directory structure with centralized approach
+**Goal:** Replace executive summary and directory structure with hybrid approach
 
 **Tasks:**
 
 - [ ] Read current README.md in full
 - [ ] Replace Executive Summary section
-  - Reframe around centralization: docs live in dedicated thoughts repo
-  - Key principles: referenced from code repos, single searchable source, human accountability via code PR
+  - Reframe around hybrid model: durable docs in central AI documentation repo, handoffs local
+  - Key principles: centralized discovery for plans/research, local ephemeral handoffs, human accountability via code PR
 - [ ] Replace Directory Structure section
-  - New structure: `plans/`, `research/`, `handoffs/`, `templates/` at root
-  - Remove `index.md` (optional in centralized model)
+  - Central repo: `plans/`, `research/`, `templates/` at root (no `handoffs/`)
+  - Local repo: `ai_docs/handoffs/` (gitignored)
   - Show "cloned as siblings" example
   - Document optional `<project>` in filename convention
 - [ ] Verify changes coherent
 
 **Success Criteria:**
 
-- Executive summary describes centralization clearly
-- Directory structure shows flat layout without project subdirs
+- Executive summary describes hybrid model clearly
+- Directory structure shows both central and local layouts
 
 ### Phase 2: Update Schema and Artifact Types
 
-**Goal:** Add project field to schema, keep artifact types same
+**Goal:** Add project field to schema, clarify handoff scope
 
 **Tasks:**
 
@@ -110,60 +119,66 @@ Modify the current proposal (which describes per-project `ai_docs/` directories)
   - Add `repos: [org/a, org/b]` field (array, for cross-repo docs)
   - Add `related_prs:` field (list of PR URLs implementing the decision)
   - Mark as optional but recommended
+  - Note: handoffs use minimal frontmatter, no project fields needed
 - [ ] Keep Artifact Types section largely unchanged
-  - Plan, Research, Handoff descriptions remain valid
-  - Minor wording tweaks for centralized context
+  - Plan, Research descriptions remain valid — centralized context
+  - Handoff description updated: local-only, gitignored, ephemeral
 
 **Success Criteria:**
 
 - Schema shows new project/projects fields
-- Artifact types still make sense for centralized model
+- Artifact types reflect hybrid model (handoffs are local)
 
 ### Phase 3: Add Discovery and Workflow Sections
 
-**Goal:** New AGENTS.md template and workflow for centralized commits
+**Goal:** AGENTS.md template and workflow reflecting hybrid split
 
 **Tasks:**
 
 - [ ] Add "Discovery: AGENTS.md Template" section
-  - Template code repos include to point to central repo
-  - Grep commands for finding project docs
+  - Template points to central repo for plans/research
+  - Template points to local `ai_docs/handoffs/` for session state
+  - Grep commands for finding project docs in central repo
   - Clone instructions for sibling setup
 - [ ] Update Workflow section
-  - Direct commits to thoughts repo
-  - Reference from code PR description
-  - Cross-reference pattern between repos
+  - Plans/research: direct commits to AI documentation repo, referenced from code PR
+  - Handoffs: created locally in `ai_docs/handoffs/`, never committed
+  - Cross-reference pattern between repos (for durable docs only)
 - [ ] Update PR Template Integration
-  - Link to thoughts repo doc instead of ai_docs/
+  - Link to AI documentation repo for plans/research
 
 **Success Criteria:**
 
-- AGENTS.md template is copy-pasteable
-- Workflow clearly describes split commit pattern
+- AGENTS.md template is copy-pasteable and shows both locations
+- Workflow clearly describes hybrid commit pattern
 
-### Phase 4: Add Tradeoffs and Update Remaining Sections
+### Phase 4: Add Tradeoffs, .gitignore, and Update Remaining Sections
 
-**Goal:** Tradeoffs comparison, update tooling/adoption sections
+**Goal:** Three-way tradeoffs comparison, .gitignore setup, update tooling/adoption
 
 **Tasks:**
 
-- [ ] Add "Tradeoffs: Centralized vs Per-Project" section
-  - Comparison table
+- [ ] Add "Tradeoffs: Per-Project vs Centralized vs Hybrid" section
+  - Three-column comparison table
   - When each approach works better
+- [ ] Add .gitignore guidance
+  - Code repos add `ai_docs/handoffs/` to .gitignore
+  - Example .gitignore snippet
 - [ ] Update Tooling section
-  - Pre-commit hooks apply to thoughts repo
-  - CI checks in thoughts repo
+  - Pre-commit hooks apply to AI documentation repo (plans/research)
+  - No tooling needed for local handoffs
 - [ ] Update Adoption Considerations
-  - Two-repo setup
+  - Two-repo setup for central docs
+  - .gitignore setup for local handoffs
   - AGENTS.md rollout
 - [ ] Update or remove Discoverability section
   - AGENTS.md integration is now "Discovery" section
-  - index.md template may be optional
 
 **Success Criteria:**
 
-- Tradeoffs table fairly presents both approaches
-- Tooling section makes sense for centralized model
+- Tradeoffs table fairly presents all three approaches
+- .gitignore setup is documented
+- Tooling section makes sense for hybrid model
 
 ### Phase 5: Final Review and Cleanup
 
@@ -172,7 +187,7 @@ Modify the current proposal (which describes per-project `ai_docs/` directories)
 **Tasks:**
 
 - [ ] Read full modified README
-- [ ] Check for orphaned references to ai_docs/
+- [ ] Check for orphaned references to centralizing handoffs
   - Update or remove as appropriate
 - [ ] Verify all sections flow logically
 - [ ] Update Next Steps section
@@ -181,7 +196,8 @@ Modify the current proposal (which describes per-project `ai_docs/` directories)
 **Success Criteria:**
 
 - Document reads coherently from start to finish
-- No references to per-project ai_docs/ except in tradeoffs comparison
+- No references to centralizing handoffs
+- Handoffs described as local-only throughout
 - Markdown lint passes
 
 ## Critical Files
@@ -190,7 +206,7 @@ Modify the current proposal (which describes per-project `ai_docs/` directories)
 
 ## Key Content to Include
 
-### Central Repo Structure
+### Central AI Documentation Repo Structure
 
 ```text
 thoughts/
@@ -200,12 +216,23 @@ thoughts/
 │   └── YYYY-MM-DD-<project>-<topic>.md    # project in filename (optional)
 ├── research/
 │   └── YYYY-MM-DD-<topic>.md
-├── handoffs/
-│   └── YYYY-MM-DD-<context>.md
 └── templates/
 ```
 
 **Naming convention:** Including `<project>` in the filename is optional but recommended when the topic is project-specific. Cross-cutting docs should omit it.
+
+### Local Code Repo Structure
+
+```text
+my-service/
+├── AGENTS.md          # points to central repo for plans/research
+├── .gitignore         # includes ai_docs/handoffs/
+└── ai_docs/
+    └── handoffs/      # ephemeral, gitignored
+        └── YYYY-MM-DD-<context>.md
+```
+
+**Handoffs are local-only.** They are session state for AI agents — not committed, not shared, not archived. Each code repo gitignores `ai_docs/handoffs/`.
 
 ### New Frontmatter Fields
 
@@ -222,7 +249,7 @@ related_prs:                        # PRs that implement this decision
 ```markdown
 ## Decision Records
 
-Decision documentation for this project is centralized at:
+Plans and research for this project are centralized at:
 **Repository:** [github.com/org/thoughts](https://github.com/org/thoughts)
 
 Find this project's docs by searching for `repo: org/<this-repo>` in frontmatter.
@@ -241,18 +268,25 @@ rg -l "repos:.*org/<this-repo>" ../thoughts/plans/  # cross-repo docs
 Check for existing context:
 - Plans: `../thoughts/plans/`
 - Research/decisions: `../thoughts/research/`
-- Handoffs from previous sessions: `../thoughts/handoffs/`
+- Handoffs from previous sessions: `ai_docs/handoffs/` (local, gitignored)
+
+### Handoffs (Local)
+
+Session handoffs live in this repo at `ai_docs/handoffs/` (gitignored).
+These are ephemeral — create them to pass context between sessions,
+but do not commit or centralize them.
 ```
 
 ### Tradeoffs Table
 
-| Aspect | Per-Project | Centralized |
-|--------|-------------|-------------|
-| Discovery | Natural - agents find while exploring | Requires AGENTS.md instruction |
-| Code repo size | Grows with docs | Stays clean |
-| Cross-project search | Difficult | Easy |
-| Doc-code atomicity | Same commit/PR | Separate, cross-referenced |
-| Drift risk | Low | Higher |
+| Aspect | Per-Project | Centralized | Hybrid (chosen) |
+|--------|-------------|-------------|-----------------|
+| Discovery | Natural — agents find while exploring | Requires AGENTS.md instruction | AGENTS.md for plans/research; handoffs local |
+| Code repo size | Grows with docs | Stays clean | Clean (handoffs gitignored) |
+| Cross-project search | Difficult | Easy | Easy for durable docs; handoffs N/A |
+| Doc-code atomicity | Same commit/PR | Separate, cross-referenced | Plans/research separate; handoffs uncommitted |
+| Drift risk | Low | Higher | Moderate — handoffs can't drift (disposable) |
+| Handoff ergonomics | Good — local and discoverable | Poor — noise in central repo | Good — local, gitignored, session-scoped |
 
 ## Verification
 
