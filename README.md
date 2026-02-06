@@ -29,7 +29,7 @@ This proposal uses two locations: a central AI documentation repository for dura
 
 ```text
 <ai-docs-repo>/
-├── README.md
+├── index.md               # catalog of all docs with topic, project, status
 ├── plans/
 │   ├── YYYY-MM-DD-<topic>.md              # project in frontmatter
 │   └── YYYY-MM-DD-<project>-<topic>.md    # project in filename (optional)
@@ -37,6 +37,8 @@ This proposal uses two locations: a central AI documentation repository for dura
 │   └── YYYY-MM-DD-<topic>.md
 └── templates/
 ```
+
+**`index.md`** is the entry point for the central repo. It lists all plans and research docs with their topic, project, status, and date — giving humans and AI agents a single place to scan before resorting to grep. Keep it updated when adding or archiving docs (manually or via a CI script).
 
 **Naming convention:** Including `<project>` in the filename is optional but recommended when the topic is project-specific. Cross-cutting docs should omit it. Project association is always available via the `project:` frontmatter field.
 
@@ -275,6 +277,7 @@ repos:
 **Note:** Link checking can be flaky locally (network, rate limits). Push to CI instead.
 
 ### CI Checks (Central Repo)
+- **Index freshness**: Verify `index.md` includes all docs in `plans/` and `research/` (or auto-regenerate)
 - **Frontmatter validation**: Ensure required fields present (use JSON schema)
 - **Link checking**: Verify `related_prs` and `superseded_by` resolve
 - **Sensitive content scan**: Flag potential secrets/credentials
@@ -325,6 +328,7 @@ rg -l "repos:.*org/<this-repo>" ../<ai-docs-repo>/plans/  # cross-repo docs
 ### Before Starting Work
 
 Check for existing context:
+- Start with the index: `../<ai-docs-repo>/index.md`
 - Plans: `../<ai-docs-repo>/plans/`
 - Research/decisions: `../<ai-docs-repo>/research/`
 - Handoffs from previous sessions: `ai_docs/handoffs/` (local, gitignored)
