@@ -279,7 +279,7 @@ repos:
 ### CI Checks (Central Repo)
 - **Index freshness**: Verify `index.md` includes all docs in `plans/` and `research/` (or auto-regenerate)
 - **Frontmatter validation**: Ensure required fields present (use JSON schema)
-- **Link checking**: Verify `related_prs` and `superseded_by` resolve
+- **Link checking**: Verify `related_prs` (canonical; `related_pr` deprecated) and `superseded_by` resolve
 - **Sensitive content scan**: Flag potential secrets/credentials
 - **CODEOWNERS**: Auto-assign reviewers for `plans/**` and `research/**`
 
