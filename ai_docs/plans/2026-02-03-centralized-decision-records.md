@@ -10,7 +10,7 @@ author: Stephen Price
 ai_assisted: true
 
 # Linking
-related_pr:
+related_prs:
 related_issue:
 
 # Classification
