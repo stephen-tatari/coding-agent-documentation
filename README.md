@@ -10,11 +10,11 @@
 
 ## Executive Summary
 
-Engineering decisions get made, code gets merged, and months later nobody remembers why things were done that way. This proposal establishes a **hybrid** convention: durable decision artifacts (plans, research) live in a centralized AI documentation repository for cross-project visibility, while ephemeral handoffs remain local in each code repo's `ai_docs/handoffs/` directory (gitignored).
+Engineering decisions get made, code gets merged, and months later nobody remembers why things were done that way. This proposal establishes a **hybrid** convention: durable decision artifacts (plans, research) live in a centralized AI documentation repository for cross-project visibility, while handoffs default to local in each code repo's `ai_docs/handoffs/` directory (gitignored by default).
 
 **Key principles:**
 - Durable decisions (plans, research) centralized for cross-project discovery
-- Handoffs stay local and ephemeral — session state, not institutional knowledge
+- Handoffs default to local and ephemeral — optionally committed when context is worth preserving
 - Discovery via AGENTS.md pointers and grep commands
 - Human accountability via code PR review (decision docs referenced, not co-committed)
 - Security-conscious: explicit policies for sensitive content
@@ -45,13 +45,13 @@ This proposal uses two locations: a central AI documentation repository for dura
 ```text
 my-service/
 ├── AGENTS.md          # points to central repo for plans/research
-├── .gitignore         # includes ai_docs/handoffs/
+├── .gitignore         # optionally includes ai_docs/handoffs/
 └── ai_docs/
-    └── handoffs/      # ephemeral, gitignored
+    └── handoffs/      # local by default, gitignored
         └── YYYY-MM-DD-<context>.md
 ```
 
-**Handoffs are local-only.** They are session state for AI agents — not committed, not shared, not archived. Each code repo gitignores `ai_docs/handoffs/`.
+**Handoffs are local by default.** They are session state for AI agents — typically gitignored and not committed. Teams may choose to commit handoffs that contain valuable context worth preserving beyond a single session.
 
 ### Sibling Clone Layout
 
@@ -79,12 +79,12 @@ Clone both repos as siblings for cross-referencing:
 - May be long-lived if it captures important architectural decisions
 - Status depends on ongoing relevance
 
-**Handoff** (ephemeral, local-only)
+**Handoff** (ephemeral by default)
 - Preserves context between AI coding sessions
 - Current state, next steps, blockers, decisions made
 - Created at natural stopping points or before context limits
-- Lives in each code repo's `ai_docs/handoffs/` (gitignored)
-- Never committed, not shared, not archived — disposable session state
+- Lives in each code repo's `ai_docs/handoffs/` (gitignored by default)
+- Typically disposable session state; optionally committed when context has lasting value
 
 ---
 
@@ -103,16 +103,15 @@ author: jane.doe                   # Human owner (run: git config user.name)
 ai_assisted: true                  # explicit flag
 ai_model: claude-3.5-sonnet        # optional: which model
 
-# Project association (plans/research only — not needed for handoffs)
+# Project association (plans/research; optional for committed handoffs)
 project: conductor                 # Logical project/service name
 repo: org/conductor                # GitHub org/repo (canonical identifier)
 repos: [org/conductor, org/api-gateway]  # For cross-repo docs
 
 # Linking
-related_pr: "org/repo#123"         # full reference preferred
-related_issue: "org/repo#456"
 related_prs:                       # PRs that implement this decision
   - https://github.com/org/conductor/pull/123
+related_issue: "org/repo#456"
 superseded_by: "2026-02-15-oauth2-v2.md"
 
 # Classification
@@ -134,7 +133,7 @@ data_sensitivity: public | internal | restricted
 
 **Optional but recommended (plans/research):** `project`, `repo` (or `repos` for cross-repo docs), `related_prs`
 
-**Note:** Handoffs use minimal frontmatter — no project association fields needed since they are local and ephemeral.
+**Note:** Local handoffs use minimal frontmatter. Committed handoffs may include project association fields for discoverability.
 
 ---
 
@@ -197,9 +196,9 @@ Consult your legal team on:
 
 ### For Handoffs (Local Code Repo)
 1. Create at natural stopping points or before context limits
-2. Write to `ai_docs/handoffs/` in the code repo (gitignored)
+2. Write to `ai_docs/handoffs/` in the code repo (gitignored by default)
 3. Next session consumes handoff and deletes it
-4. Never commit, never centralize — these are disposable session state
+4. Optionally commit handoffs that contain context worth preserving beyond a single session
 
 ### Cross-Referencing Between Repos
 - Code PR description links to the decision doc in the central repo
@@ -231,7 +230,7 @@ draft → active → superseded | archived
 **Type-specific defaults:**
 - `type: plan` → auto-archive on merge
 - `type: research` → remains `active` until explicitly superseded (for decisions) or evaluate on merge (for exploratory notes)
-- `type: handoff` → deleted after consumed by next session (local, never committed)
+- `type: handoff` → deleted after consumed by next session (local by default; committed handoffs follow normal lifecycle)
 
 ### When to Update vs Supersede
 - **Edit in place**: Clarifications, typo fixes, adding detail (add changelog line)
@@ -260,7 +259,7 @@ When deprecating a feature:
 
 ## Tooling Recommendations
 
-These apply to the **central AI documentation repo** (plans/research). Local handoffs require no tooling.
+These apply to the **central AI documentation repo** (plans/research). Local (gitignored) handoffs require no tooling.
 
 ### Pre-commit Hooks (Central Repo)
 ```yaml
@@ -289,12 +288,14 @@ Provide in the central repo's `templates/` directory:
 
 ### .gitignore Setup (Code Repos)
 
-Each code repo should add this to `.gitignore`:
+By default, each code repo adds handoffs to `.gitignore`:
 
 ```gitignore
-# AI session handoffs — ephemeral, not committed
+# AI session handoffs — ephemeral by default
 ai_docs/handoffs/
 ```
+
+Teams that choose to commit handoffs can remove this entry. Committed handoffs should meet the same quality bar as other artifacts.
 
 ---
 
@@ -328,11 +329,11 @@ Check for existing context:
 - Research/decisions: `../<ai-docs-repo>/research/`
 - Handoffs from previous sessions: `ai_docs/handoffs/` (local, gitignored)
 
-### Handoffs (Local)
+### Handoffs (Local by Default)
 
-Session handoffs live in this repo at `ai_docs/handoffs/` (gitignored).
-These are ephemeral — create them to pass context between sessions,
-but do not commit or centralize them.
+Session handoffs live in this repo at `ai_docs/handoffs/` (gitignored by default).
+These are typically ephemeral — create them to pass context between sessions.
+Optionally commit handoffs that contain context worth preserving.
 ```
 
 ### When to Create Artifacts
@@ -389,7 +390,7 @@ This syntax is:
 
 Adoption requires:
 - A central AI documentation repo with `plans/`, `research/`, `templates/` directories
-- `.gitignore` entries in each code repo for `ai_docs/handoffs/`
+- `.gitignore` entries in each code repo for `ai_docs/handoffs/` (recommended default)
 - AGENTS.md in each code repo using the template above
 - PR templates in code repos updated to reference the central documentation repo
 
