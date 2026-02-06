@@ -1,6 +1,6 @@
 # Proposal: Decision Records with AI Assistance
 
-**Goal:** Preserve the "why" behind decisions - plans, research, and rationale - as versioned artifacts alongside code.
+**Goal:** Preserve the "why" behind decisions - plans, research, and rationale - as versioned artifacts discoverable from code.
 
 **Audience:** Engineering organization adoption proposal
 
@@ -10,31 +10,58 @@
 
 ## Executive Summary
 
-Engineering decisions get made, code gets merged, and months later nobody remembers why things were done that way. This proposal establishes a convention for committing decision artifacts to git repositories, preserving institutional knowledge.
+Engineering decisions get made, code gets merged, and months later nobody remembers why things were done that way. This proposal establishes a **hybrid** convention: durable decision artifacts (plans, research) live in a centralized AI documentation repository for cross-project visibility, while ephemeral handoffs remain local in each code repo's `ai_docs/handoffs/` directory (gitignored).
 
 **Key principles:**
-- Docs ship *with* code changes, not as separate PRs (avoids noise)
-- Human accountability via PR review
-- Structured directory with clear purpose
-- Lifecycle management to prevent staleness
+- Durable decisions (plans, research) centralized for cross-project discovery
+- Handoffs stay local and ephemeral — session state, not institutional knowledge
+- Discovery via AGENTS.md pointers and grep commands
+- Human accountability via code PR review (decision docs referenced, not co-committed)
 - Security-conscious: explicit policies for sensitive content
 
 ---
 
 ## Directory Structure
 
-```
-ai_docs/
-├── index.md          # Master index (discovery entry point)
-├── plans/            # Implementation plans (short-lived)
-│   └── YYYY-MM-DD-<feature>.md
-├── research/         # Research notes AND decision records (variable lifespan)
+This proposal uses two locations: a central AI documentation repository for durable decisions, and local directories in each code repo for ephemeral handoffs.
+
+### Central AI Documentation Repository
+
+```text
+<ai-docs-repo>/
+├── README.md
+├── plans/
+│   ├── YYYY-MM-DD-<topic>.md              # project in frontmatter
+│   └── YYYY-MM-DD-<project>-<topic>.md    # project in filename (optional)
+├── research/
 │   └── YYYY-MM-DD-<topic>.md
-└── handoffs/         # Session continuity documents
-    └── YYYY-MM-DD-<context>.md
+└── templates/
 ```
 
-**index.md** serves as the master index for AI agents and humans alike - a lexicon of project-specific terminology, architecture overview, and links to active documents. This follows the [SIP-189 pattern](https://github.com/apache/superset/issues/35822) for context engineering.
+**Naming convention:** Including `<project>` in the filename is optional but recommended when the topic is project-specific. Cross-cutting docs should omit it. Project association is always available via the `project:` frontmatter field.
+
+### Local Code Repository
+
+```text
+my-service/
+├── AGENTS.md          # points to central repo for plans/research
+├── .gitignore         # includes ai_docs/handoffs/
+└── ai_docs/
+    └── handoffs/      # ephemeral, gitignored
+        └── YYYY-MM-DD-<context>.md
+```
+
+**Handoffs are local-only.** They are session state for AI agents — not committed, not shared, not archived. Each code repo gitignores `ai_docs/handoffs/`.
+
+### Sibling Clone Layout
+
+Clone both repos as siblings for cross-referencing:
+
+```text
+~/code/
+├── <ai-docs-repo>/    # central AI documentation repo
+└── my-service/        # code repo with AGENTS.md pointing to ../<ai-docs-repo>/
+```
 
 ---
 
@@ -52,11 +79,12 @@ ai_docs/
 - May be long-lived if it captures important architectural decisions
 - Status depends on ongoing relevance
 
-**Handoff** (session continuity)
+**Handoff** (ephemeral, local-only)
 - Preserves context between AI coding sessions
 - Current state, next steps, blockers, decisions made
 - Created at natural stopping points or before context limits
-- Typically short-lived, consumed by next session
+- Lives in each code repo's `ai_docs/handoffs/` (gitignored)
+- Never committed, not shared, not archived — disposable session state
 
 ---
 
@@ -75,9 +103,16 @@ author: jane.doe                   # Human owner (run: git config user.name)
 ai_assisted: true                  # explicit flag
 ai_model: claude-3.5-sonnet        # optional: which model
 
+# Project association (plans/research only — not needed for handoffs)
+project: conductor                 # Logical project/service name
+repo: org/conductor                # GitHub org/repo (canonical identifier)
+repos: [org/conductor, org/api-gateway]  # For cross-repo docs
+
 # Linking
 related_pr: "org/repo#123"         # full reference preferred
 related_issue: "org/repo#456"
+related_prs:                       # PRs that implement this decision
+  - https://github.com/org/conductor/pull/123
 superseded_by: "2026-02-15-oauth2-v2.md"
 
 # Classification
@@ -97,17 +132,21 @@ data_sensitivity: public | internal | restricted
 
 **Conditional:** `ai_assisted` required if AI was used
 
+**Optional but recommended (plans/research):** `project`, `repo` (or `repos` for cross-repo docs), `related_prs`
+
+**Note:** Handoffs use minimal frontmatter — no project association fields needed since they are local and ephemeral.
+
 ---
 
 ## Quality Bar: When to Commit
 
 **Commit when ALL are true:**
-- [ ] Claims are linked to sources (code refs, docs, external links)
-- [ ] Assumptions are explicitly listed
-- [ ] Alternatives were considered (for decision-focused research)
-- [ ] PR review provides human accountability (no separate `reviewed_by` field needed)
-- [ ] No secrets, credentials, or sensitive data included
-- [ ] Sensitive internal URLs/systems are redacted or generalized
+- Claims are linked to sources (code refs, docs, external links)
+- Assumptions are explicitly listed
+- Alternatives were considered (for decision-focused research)
+- Code PR review provides human accountability (decision doc referenced from the implementing PR)
+- No secrets, credentials, or sensitive data included
+- Sensitive internal URLs/systems are redacted or generalized
 
 **File size guidance:** Keep individual documents under 500 lines (~1000-2000 tokens). Monolithic files degrade AI tool performance and exceed practical context limits. If a document grows too large, split by subtopic or phase.
 
@@ -147,38 +186,31 @@ Consult your legal team on:
 
 ---
 
-## Workflow: Committing with Code
+## Workflow
 
-### For Plans
-1. Create plan document early in feature branch
-2. Submit for review (can be before code)
-3. Implementation commits follow
-4. PR includes both plan + code
-5. Plan status → `archived` on merge
+### For Plans and Research (Central AI Documentation Repo)
+1. Create document in the central AI documentation repo (`plans/` or `research/`)
+2. Commit directly — no PR required for the documentation repo
+3. Reference the decision doc from the code PR that implements it
+4. Add implementing PR URL to `related_prs:` in the decision doc's frontmatter
+5. Status transitions follow the lifecycle rules below
 
-### For Research (including decisions)
-1. Create when making significant architectural choices OR during investigation
-2. Include alternatives considered and rationale for decisions
-3. Consolidate multiple sessions into one doc
-4. Commit when research concludes or with related code change
-5. Decisions remain `active` until superseded; exploratory notes evaluated on merge
-
-### For Handoffs
+### For Handoffs (Local Code Repo)
 1. Create at natural stopping points or before context limits
-2. Document current state, next steps, blockers, and decisions made
-3. Include relevant file paths and code references
-4. Next session consumes handoff and archives it
+2. Write to `ai_docs/handoffs/` in the code repo (gitignored)
+3. Next session consumes handoff and deletes it
+4. Never commit, never centralize — these are disposable session state
 
-### Avoiding PR Noise
-- Docs accompany code changes, not standalone "docs-only" PRs
-- One plan per feature branch (not per session)
-- Exception: docs-only PRs allowed for corrections, security redactions, or archival
+### Cross-Referencing Between Repos
+- Code PR description links to the decision doc in the central repo
+- Decision doc's `related_prs:` field links back to implementing PRs
+- This creates a bidirectional trail without co-committing docs and code
 
 ### PR Template Integration
-Add to PR template:
+Add to your code repo's PR template:
 ```markdown
 ## Decision Artifact
-- [ ] Decision doc added/updated: [link]
+- [ ] Decision doc in [AI docs repo](https://github.com/org/<ai-docs-repo>): [link to doc]
 - [ ] Or: No decision doc needed (trivial change)
 ```
 
@@ -199,7 +231,7 @@ draft → active → superseded | archived
 **Type-specific defaults:**
 - `type: plan` → auto-archive on merge
 - `type: research` → remains `active` until explicitly superseded (for decisions) or evaluate on merge (for exploratory notes)
-- `type: handoff` → auto-archive after consumed by next session
+- `type: handoff` → deleted after consumed by next session (local, never committed)
 
 ### When to Update vs Supersede
 - **Edit in place**: Clarifications, typo fixes, adding detail (add changelog line)
@@ -214,142 +246,152 @@ Rather than age-based flags, detect via signals:
 
 ### Ownership Model
 - **Primary owner**: `author` field, updated if ownership transfers
-- **CODEOWNERS**: Map `ai_docs/**` to appropriate team(s)
+- **CODEOWNERS**: Map `plans/**` and `research/**` to appropriate team(s) in the central repo
 - **On departure**: Ownership transfers to team, not orphaned
 
-### Archival Checklist
+### Archival
 When deprecating a feature:
-- [ ] Archive related plans
-- [ ] Supersede or archive decision-focused research
-- [ ] Update or archive exploratory research
-- [ ] Clean up consumed handoffs
+- Archive related plans
+- Supersede or archive decision-focused research
+- Update or archive exploratory research
+- Clean up consumed handoffs
 
 ---
 
 ## Tooling Recommendations
 
-### Pre-commit Hooks (Local)
+These apply to the **central AI documentation repo** (plans/research). Local handoffs require no tooling.
+
+### Pre-commit Hooks (Central Repo)
 ```yaml
-# .pre-commit-config.yaml
+# .pre-commit-config.yaml (in the central AI documentation repo)
 repos:
   - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.14.0
     hooks:
       - id: markdownlint-cli2
-        files: ^ai_docs/.*\.md$
+        files: ^(plans|research)/.*\.md$
 ```
 
 **Note:** Link checking can be flaky locally (network, rate limits). Push to CI instead.
 
-### CI Checks
+### CI Checks (Central Repo)
 - **Frontmatter validation**: Ensure required fields present (use JSON schema)
-- **Link checking**: Verify `related_pr` and `superseded_by` resolve (relative links only locally)
+- **Link checking**: Verify `related_prs` and `superseded_by` resolve
 - **Sensitive content scan**: Flag potential secrets/credentials
-- **CODEOWNERS**: Auto-assign reviewers for `ai_docs/**`
+- **CODEOWNERS**: Auto-assign reviewers for `plans/**` and `research/**`
 
 ### Templates
-Provide in `ai_docs/templates/`:
+Provide in the central repo's `templates/` directory:
 - `plan.md` - Implementation plan scaffold
 - `research.md` - Research note scaffold (includes decision record structure)
-- `handoff.md` - Session handoff scaffold
+- `handoff.md` - Session handoff scaffold (for copying into code repos)
 
-### Discoverability
+### .gitignore Setup (Code Repos)
 
-#### AGENTS.md Integration
+Each code repo should add this to `.gitignore`:
 
-Add this section to your repository's `AGENTS.md` (or `CLAUDE.md`) to teach AI agents about your decision records:
+```gitignore
+# AI session handoffs — ephemeral, not committed
+ai_docs/handoffs/
+```
+
+---
+
+## Discovery
+
+### AGENTS.md Template
+
+Add this section to each code repository's `AGENTS.md` to teach AI agents where to find decision records:
 
 ```markdown
 ## Decision Records
 
-Before implementing significant changes, check `ai_docs/` for existing context:
+Plans and research for this project are centralized at:
+**Repository:** [github.com/org/<ai-docs-repo>](https://github.com/org/<ai-docs-repo>)
 
-- **Plans** (`ai_docs/plans/`): Active implementation plans. Check before starting work on a feature area.
-- **Research** (`ai_docs/research/`): Technical investigations and ADRs. Check before making architectural decisions.
-- **Handoffs** (`ai_docs/handoffs/`): Session continuity notes. Check when resuming paused work.
+Find this project's docs by searching for `repo: org/<this-repo>` in frontmatter.
+
+### Discovery
+
+Clone as sibling directory:
+git clone git@github.com:org/<ai-docs-repo>.git ../<ai-docs-repo>
+
+Search for this repo's docs:
+rg -l "repo: org/<this-repo>" ../<ai-docs-repo>/plans/
+rg -l "repos:.*org/<this-repo>" ../<ai-docs-repo>/plans/  # cross-repo docs
+
+### Before Starting Work
+
+Check for existing context:
+- Plans: `../<ai-docs-repo>/plans/`
+- Research/decisions: `../<ai-docs-repo>/research/`
+- Handoffs from previous sessions: `ai_docs/handoffs/` (local, gitignored)
+
+### Handoffs (Local)
+
+Session handoffs live in this repo at `ai_docs/handoffs/` (gitignored).
+These are ephemeral — create them to pass context between sessions,
+but do not commit or centralize them.
+```
 
 ### When to Create Artifacts
 
-| Situation | Create |
-|-----------|--------|
-| Starting multi-session feature work | Plan |
-| Evaluating technical options | Research note |
-| Making architectural decision | ADR (research note with Decision section) |
-| Pausing mid-implementation | Handoff |
-| Completing investigation | Research note |
+| Situation | Create | Where |
+|-----------|--------|-------|
+| Starting multi-session feature work | Plan | Central repo (`plans/`) |
+| Evaluating technical options | Research note | Central repo (`research/`) |
+| Making architectural decision | ADR (research with Decision section) | Central repo (`research/`) |
+| Pausing mid-implementation | Handoff | Local code repo (`ai_docs/handoffs/`) |
+| Completing investigation | Research note | Central repo (`research/`) |
 
 ### Cross-Referencing
 
-Reference other ai_docs using `@ai_docs/` prefix for grep-ability:
-- `@ai_docs/research/2026-01-10-auth-options.md`
-- `@ai_docs/plans/2026-01-12-oauth2-impl.md`
-
-Start at `ai_docs/index.md` for project overview and active documents.
-```
-
-#### index.md Template
-
-Maintain `ai_docs/index.md` as the entry point. Template:
+Reference decision docs using relative paths from the sibling clone:
 
 ```markdown
-# Project: [Name]
-
-## Overview
-[2-3 sentence project description. What problem does it solve? Who uses it?]
-
-## Key Terminology
-
-| Term | Definition |
-|------|------------|
-| [Domain term] | [Clear definition] |
-| [Acronym] | [Expansion and meaning] |
-
-## Architecture
-
-[Brief description of system structure]
-
-\`\`\`
-┌─────────┐     ┌─────────┐     ┌─────────┐
-│ Client  │────▶│   API   │────▶│   DB    │
-└─────────┘     └─────────┘     └─────────┘
-\`\`\`
-
-## Active Decisions
-- @ai_docs/research/YYYY-MM-DD-[decision-name].md - [One-line summary]
-
-## Current Plans
-- @ai_docs/plans/YYYY-MM-DD-[feature-name].md - [Status: planning|in-progress|blocked]
-
-## Conventions
-- [Key coding convention or pattern]
-- [Testing approach]
-- [Deployment process]
-
-## Out of Scope
-- [What this project explicitly doesn't handle]
-- [Adjacent systems to be aware of]
-```
-
-### Cross-Referencing
-
-Reference other ai_docs using `@ai_docs/` prefix:
-
-```markdown
-Based on constraints identified in @ai_docs/research/2026-01-10-auth-options.md, we chose OAuth2.
+Based on constraints in ../<ai-docs-repo>/research/2026-01-10-auth-options.md, we chose OAuth2.
 
 See also:
-- @ai_docs/plans/2026-01-12-oauth2-impl.md
-- @ai_docs/research/2026-01-15-token-storage.md
+- ../<ai-docs-repo>/plans/2026-01-12-oauth2-impl.md
+- ../<ai-docs-repo>/research/2026-01-15-token-storage.md
+```
+
+Within the central repo, reference other docs by relative path:
+
+```markdown
+See also: ../plans/2026-01-12-oauth2-impl.md
 ```
 
 This syntax is:
-- Grep-able across the codebase
+- Grep-able across both repos
 - Parseable by AI agents
-- Consistent with [SIP-189](https://github.com/apache/superset/issues/35822) conventions
+- Works with standard filesystem navigation
+
+---
+
+## Tradeoffs: Per-Project vs Centralized vs Hybrid
+
+| Aspect | Per-Project | Centralized | Hybrid (chosen) |
+|--------|-------------|-------------|-----------------|
+| Discovery | Natural — agents find while exploring | Requires AGENTS.md instruction | AGENTS.md for plans/research; handoffs local |
+| Code repo size | Grows with docs | Stays clean | Clean (handoffs gitignored) |
+| Cross-project search | Difficult | Easy | Easy for durable docs; handoffs N/A |
+| Doc-code atomicity | Same commit/PR | Separate, cross-referenced | Plans/research separate; handoffs uncommitted |
+| Drift risk | Low | Higher | Moderate — handoffs can't drift (disposable) |
+| Handoff ergonomics | Good — local and discoverable | Poor — noise in central repo | Good — local, gitignored, session-scoped |
 
 ---
 
 ## Adoption Considerations
+
+### Setup Requirements
+
+Adoption requires:
+- A central AI documentation repo with `plans/`, `research/`, `templates/` directories
+- `.gitignore` entries in each code repo for `ai_docs/handoffs/`
+- AGENTS.md in each code repo using the template above
+- PR templates in code repos updated to reference the central documentation repo
 
 ### Pilot Program
 1. Start with 1-2 willing teams
@@ -364,14 +406,15 @@ This syntax is:
 ### Failure Modes to Avoid
 | Risk | Mitigation |
 |------|------------|
-| Docs drift from code | Commit together, PR template checklist |
+| Docs drift from code | Cross-referencing via `related_prs:`, PR template checklist |
 | Review fatigue | Consolidated docs, "when not to write" guidance |
 | Staleness | Signal-based detection, ownership model |
 | Inaccurate AI content | PR review provides human accountability |
 | Security leaks | Prohibited content policy, CI scanning |
+| Two-repo confusion | AGENTS.md template, sibling clone layout |
 
 ### Alternative Approach
-If full adoption is too heavy, consider: keep artifacts in **PR descriptions or linked issues**, only "promote" to repo when it becomes a long-lived architectural decision.
+If full adoption is too heavy, consider: keep artifacts in **PR descriptions or linked issues**, only "promote" to the central repo when it becomes a long-lived architectural decision.
 
 ---
 
@@ -386,10 +429,11 @@ PR #456: "Add OAuth2 authentication"
 ### After (with decision docs)
 PR #456: "Add OAuth2 authentication"
 - 2000 lines of code
-- `ai_docs/research/2026-01-15-auth-approach.md`:
+- PR description links to `research/2026-01-15-auth-approach.md` in the central AI docs repo:
   - **Decision**: OAuth2 with PKCE via `openid-client` library
   - **Alternatives**: SAML (rejected: complexity), Auth0 (rejected: cost), Keycloak (rejected: ops burden)
   - **Constraints**: Must support mobile apps, no new infrastructure
+- Decision doc's `related_prs:` links back to PR #456
 - 6 months later: new engineer reads record, understands context in 5 minutes
 
 ---
@@ -417,12 +461,3 @@ PR #456: "Add OAuth2 authentication"
 - [Microsoft AI Code Review at Scale](https://devblogs.microsoft.com/engineering-at-microsoft/enhancing-code-quality-at-scale-with-ai-powered-code-reviews/)
 - [Graphite: Adopting AI Tools](https://graphite.com/guides/adopting-ai-tools-development-workflow)
 
----
-
-## Next Steps
-
-1. **Review security/compliance policy** - Legal/security team sign-off
-2. **Create ai_docs/index.md** - Master index with project terminology and architecture
-3. **Add templates** - Plan, research, and handoff templates with frontmatter
-4. **Configure tooling** - Pre-commit hooks, CI checks, CODEOWNERS
-5. **Pilot with volunteer team** - Gather feedback before broader rollout
