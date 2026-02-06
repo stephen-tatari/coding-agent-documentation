@@ -12,7 +12,7 @@ ai_assisted: true
 ai_model: claude-opus-4-5
 
 # Linking
-related_pr: # pending
+related_prs: # pending
 related_issue: # n/a
 
 # Classification
